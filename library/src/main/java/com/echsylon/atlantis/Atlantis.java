@@ -32,7 +32,7 @@ import static com.echsylon.atlantis.Utils.notEmpty;
  */
 @SuppressWarnings({"WeakerAccess", "unused"})
 public class Atlantis {
-    private static final int PORT = 8080;
+    private static final int DEFAULT_PORT = 8080;
 
     private static final MockResponse CONTINUE = new MockResponse.Builder()
             .setStatus(100, "Continue")
@@ -172,15 +172,24 @@ public class Atlantis {
     }
 
     /**
-     * Starts the {@code Atlantis} mock environment.
+     * Starts the {@code Atlantis} mock environment at the default port.
      */
     public void start() {
+        start(DEFAULT_PORT);
+    }
+
+    /**
+     * Starts the {@code Atlantis} mock environment at the given port.
+     *
+     * @param port The port to start listening for network requests at.
+     */
+    public void start(int port) {
         try {
             // Null InetSocketAddress will force the internal ServerSocket to
             // assume the "wildcard" address (ultimately "localhost") as host,
             // with the given benefit of not attempting to resolve it on the
             // network.
-            mockServer.start(null, PORT);
+            mockServer.start(null, port);
         } catch (IOException e) {
             info(e, "Couldn't start Atlantis");
         }
@@ -252,6 +261,9 @@ public class Atlantis {
     public void setRecordMissingRequestsEnabled(boolean enabled) {
         recordMissingRequests = enabled && notEmpty(configuration.fallbackBaseUrl());
         info("Record missing requests: %s", enabled ? "enabled" : "disabled");
+        if (recordMissingRequests && atlantisDir == null) {
+            this.atlantisDir = new File(context.getExternalFilesDir(null), "atlantis");
+        }
     }
 
     /**
@@ -268,6 +280,9 @@ public class Atlantis {
     public void setRecordMissingFailuresEnabled(boolean enabled) {
         recordMissingFailures = enabled && recordMissingRequests;
         info("Record missing requests if failed: %s", enabled ? "enabled" : "disabled");
+        if (recordMissingRequests && atlantisDir == null) {
+            this.atlantisDir = new File(context.getExternalFilesDir(null), "atlantis");
+        }
     }
 
     /**
@@ -349,7 +364,6 @@ public class Atlantis {
         this.proxy = new Proxy();
         this.mockServer = new MockWebServer(this::serve, this::getSettings);
         this.servedRequests = new ConcurrentLinkedQueue<>();
-        this.atlantisDir = new File(context.getExternalFilesDir(null), "atlantis");
 
         NOT_FOUND.setSourceHelperIfAbsent(this::open);
         CONTINUE.setSourceHelperIfAbsent(this::open);
